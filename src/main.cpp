@@ -33,6 +33,13 @@ void setup() {
   wfm.connect();
   mm.connect();
   sm.setup();
+
+  if (getData("res") == 1) {
+    flc.clearState();
+    putData(0, "res");
+    mm.publish("/success", "500");
+  }
+
   delay(60000);  // 1 minute to preheat MQ3
   sm.setEstimate();
 
