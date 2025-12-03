@@ -38,39 +38,39 @@ class FLC {
   const char* K_NORISE = "noris";    // uint16_t
 
   // ---------- Tunable thresholds (modifiable) ----------
-  float overflowHeightThreshold =
+  const float overflowHeightThreshold =
       100.0f;  // mm absolute or jar-specific (you said ΔH available)
-  int ethanolSaturateValue = 4095;  // raw ADC saturation
-  int ethanolSaturateNeeded = 3;    // count threshold
+  const int ethanolSaturateValue = 4095;  // raw ADC saturation
+  const int ethanolSaturateNeeded = 3;    // count threshold
 
   // For rise/fall detection (compare last delta to current)
-  float riseEpsilon = 0.5f;  // mm difference to consider change
-  float fallEpsilon = 0.5f;
+  const float riseEpsilon = 0.5f;  // mm difference to consider change
+  const float fallEpsilon = 0.5f;
 
   // Small meaningful rise
-  float minMeaningfulDelta = 0.25f;  // mm
+  const float minMeaningfulDelta = 0.25f;  // mm
 
   // Output domain resolution
   const int OUT_STEPS;
 
   // --- Fuzzy thresholds (inputs) ---
   // Temperature (°C)
-  float T_low_max = 29.9f;
-  float T_med_min = 30.0f;
-  float T_med_max = 32.9f;
-  float T_high_min = 33.0f;
+  const float T_low_max = 29.9f;
+  const float T_med_min = 30.0f - 2.5f;
+  const float T_med_max = 32.9f + 2.5f;
+  const float T_high_min = 33.0f;
 
   // Delta height (mm)
-  float H_low_max = 15.0f;
-  float H_med_min = 16.0f;
-  float H_med_max = 25.0f;
-  float H_high_min = 26.0f;
+  const float H_low_max = 15.0f;
+  const float H_med_min = 16.0f - 2.5f;
+  const float H_med_max = 25.0f + 2.5f;
+  const float H_high_min = 26.0f;
 
   // Ethanol (assume scaled 0..4095 OR ppm); thresholds chosen as raw ADC-ish
-  float E_low_max = 2178.9f;
-  float E_med_min = 2179.0f;
-  float E_med_max = 3136.9f;
-  float E_high_min = 3137.0f;
+  const float E_low_max = 2178.9f;
+  const float E_med_min = 2179.0f - 100.0f;
+  const float E_med_max = 3136.9f + 100.0f;
+  const float E_high_min = 3137.0f;
 
   // ---------- Public API ----------
   void begin(const char* ns = nullptr) {
