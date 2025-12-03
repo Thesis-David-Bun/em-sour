@@ -21,7 +21,7 @@ constexpr const int pin_ds = 4;
 WFM wfm(ssid, pass);
 MM mm(hiveMQ_url, port, id_mqtt, pass_mqtt);
 SM sm(pin_mq3, pin_ds, 23);
-FLC flc;
+FLC flc(50);
 
 constexpr uint64_t SLEEP_TIME = 10ULL * 60ULL * 1000000ULL;  // 10 MINUTES
 
@@ -33,14 +33,16 @@ void setup() {
   wfm.connect();
   mm.connect();
   sm.setup();
+  mm.is_reset();
 
   if (getData("res") == 1) {
     flc.clearState();
     putData(0, "res");
+    // Serial.println("00");
     mm.publish("/success", "500");
   }
 
-  delay(60000);  // 1 minute to preheat MQ3
+  sm.initialSetup();
   sm.setEstimate();
 
   // 10 readings
@@ -62,11 +64,10 @@ void setup() {
             ",\"fil_mean_E\":" + p.filE + ",\"raw_mean_T\":" + p.rawT +
             ",\"fil_mean_T\":" + p.filT + ",\"raw_mean_H\":" + p.rawH +
             ",\"fil_mean_H\":" + p.filH +
-            ",\"status\":" + flc.infer(p.filT, 187.0f - p.filH, p.filE) +
+            ",\"status\":" + flc.infer(187.0f - p.filH, p.filE, p.filT) +
             ",\"n\":11" + "}";
         mm.publish(topic, payload.c_str());
       }
-      mm.loop();
     } else {
       wfm.ensureConnection();
       mm.ensureConnection();

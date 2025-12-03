@@ -26,9 +26,13 @@ void callback(char* topic, byte* message, unsigned int length) {
   for (int i = 0; i < length; i++) {
     messageTemp += (char)message[i];
   }
+  // Serial.println("3");
 
   if (String(topic) == "/is_reset") {
-    if (messageTemp = "1") putData(1, "res");
+    if (messageTemp == "1") {
+      putData(1, "res");
+      // Serial.println("4");
+    }
   }
 }
 
@@ -39,7 +43,7 @@ class MM {
   const char* user_name;
   const char* password;
 
-  unsigned long MAX_DURATION = 10000;  // 10 seconds
+  unsigned long MAX_DURATION = 20000;  // 10 seconds
 
   WiFiClientSecure wifiClient;
   PubSubClient mqttClient;
@@ -60,13 +64,13 @@ class MM {
     String clientID = "ESP32-C" + String(random(0xffff), HEX);
     unsigned long start = millis();
     while (!mqttClient.connected() && millis() - start < MAX_DURATION) {
-      if (mqttClient.connect(clientID.c_str(), user_name, password)) {
+      if (mqttClient.connect(clientID.c_str(), user_name, password) &&
+          mqttClient.subscribe("/is_reset")) {
         break;
       } else {
         delay(100);
       }
     }
-    is_reset();
   }
 
   void ensureConnection() {
@@ -84,10 +88,13 @@ class MM {
   void loop() { mqttClient.loop(); }
 
   void is_reset() {
+    // Serial.println("1");
     publish("/is_reset", "p");
     unsigned long start = millis();
     while (millis() - start < MAX_DURATION) {
+      loop();
       delay(100);
     }
+    // Serial.println("2");
   }
 };

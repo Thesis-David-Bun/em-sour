@@ -27,7 +27,7 @@ class FLC {
     RECOVERY
   };
 
-  FLC() : OUT_STEPS(50) {}
+  FLC(const int x) : OUT_STEPS(x) {}
 
   // ---------- Preferences keys (short) ----------
   const char* PREF_NS = "starter";
@@ -39,7 +39,7 @@ class FLC {
 
   // ---------- Tunable thresholds (modifiable) ----------
   float overflowHeightThreshold =
-      85.0f;  // mm absolute or jar-specific (you said ΔH available)
+      100.0f;  // mm absolute or jar-specific (you said ΔH available)
   int ethanolSaturateValue = 4095;  // raw ADC saturation
   int ethanolSaturateNeeded = 3;    // count threshold
 
@@ -48,7 +48,7 @@ class FLC {
   float fallEpsilon = 0.5f;
 
   // Small meaningful rise
-  float minMeaningfulDelta = 1.0f;  // mm
+  float minMeaningfulDelta = 0.25f;  // mm
 
   // Output domain resolution
   const int OUT_STEPS;
@@ -101,12 +101,11 @@ class FLC {
       isRising = true;
     else if (diff < -fallEpsilon)
       isFalling = true;
-    // If very small changes, neither rising nor falling
-    if (abs(deltaH_mm) < minMeaningfulDelta) {
-      // treat as no meaningful rise
+    else if (abs(diff) <= minMeaningfulDelta)
       isRising = false;
-      // count no-rise
-    }
+    // If very small changes, neither rising nor falling
+    // treat as no meaningful rise
+    // count no-rise
 
     // update peak logic: peak = highest observed delta before falling
     if (isRising) {
@@ -123,7 +122,7 @@ class FLC {
         hasPeaked = true;
       }
       // increment no-rise counter if delta small
-      if (abs(diff) <= riseEpsilon) {
+      if (abs(diff) <= minMeaningfulDelta) {
         noRiseCnt++;
       }
     }
@@ -145,7 +144,7 @@ class FLC {
     // --- Safety / hard rules based on stored counters ---
     // Rule 0: Overflow or ethanol saturate 3 times -> OVER-FERMENTED / need
     // refeed
-    if (deltaH_mm >= overflowHeightThreshold ||
+    if (deltaH_mm <= overflowHeightThreshold ||
         ethCount >= ethanolSaturateNeeded) {
       return "\"OVERFLOW\"";  // interpret as over-fermented/overflow condition
     }
@@ -153,7 +152,7 @@ class FLC {
     // Rule: If sustained no-rise for long (e.g., 6 samples) ->
     // FEED_AGAIN/RECOVERY (avoid classifying as "dead")
     if (noRiseCnt >= 6) {
-      return "\"RECOVERY\"";  // need refeed/revive
+      return "\"REFEED\"";  // need refeed/revive
     }
 
     // Now do fuzzy Mamdani inference using current inputs

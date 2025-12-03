@@ -70,19 +70,20 @@ class SM {
     }
     delay(100);
     readTemp();
-    pinMode(pinIRLML2505, OUTPUT);
-    digitalWrite(pinIRLML2505, HIGH);
   }
 
   void initialSetup() {
-    preferences.begin("my", false);
-    short int counter = preferences.getShort("counter", 0);
-    while (counter != MAX_SETUP_MQ3) {
-      delay(delayTime);
-      counter++;
-      preferences.putShort("counter", counter);
-    }
-    preferences.end();
+    // preferences.begin("my", false);
+    // short int counter = preferences.getShort("counter", 0);
+    // while (counter != MAX_SETUP_MQ3) {
+    //   delay(delayTime);
+    //   counter++;
+    //   preferences.putShort("counter", counter);
+    // }
+    // preferences.end();
+    pinMode(pinIRLML2505, OUTPUT);
+    digitalWrite(pinIRLML2505, HIGH);
+    delay(60000);  // 1 minute to preheat MQ3
   }
 
   void setEstimate() {
