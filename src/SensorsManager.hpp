@@ -1,16 +1,15 @@
 #pragma once
 #include <DallasTemperature.h>
 #include <OneWire.h>
-#include <Preferences.h>
 #include <VL53L0X.h>
 #include <Wire.h>
 
 #include "Kalman1D.hpp"
 
 constexpr const int tofTimeout = 3500;
-constexpr const int tofTimingMeasure = 2000000;           // 2000ms
-constexpr const uint32_t delayTime = 1000 * 60 * 5;       // 5 minutes
-constexpr const short int MAX_SETUP_MQ3 = (60 / 5) * 48;  // 48 hours
+constexpr const int tofTimingMeasure = 2000000;      // 2000ms
+constexpr const uint32_t delayTime = 1000 * 60 * 5;  // 5 minutes
+// constexpr const short int MAX_SETUP_MQ3 = (60 / 5) * 24;  // 48 hours
 
 constexpr const float sigmaToF = 1.33f * 1.33f;
 constexpr const float sigmaDS = 0.32f * 0.32f;
@@ -44,7 +43,6 @@ class SM {
   OneWire oneWire;
   DallasTemperature tempSensor;
   VL53L0X tofSensor;
-  Preferences preferences;
   Kalman1D kalmanToF;
   Kalman1D kalmanMQ3;
   Kalman1D kalmanDS;
@@ -57,7 +55,7 @@ class SM {
         oneWire(b),
         tempSensor(&oneWire),
         kalmanToF(0.7f, sigmaToF),
-        kalmanMQ3(1.0f, sigmaMQ3),
+        kalmanMQ3(0.8f, sigmaMQ3),
         kalmanDS(0.5f, sigmaDS) {}
 
   void setup() {
@@ -68,28 +66,35 @@ class SM {
     if (tofSensor.init()) {
       tofSensor.setMeasurementTimingBudget(tofTimingMeasure);
     }
-    delay(100);
     readTemp();
-  }
-
-  void initialSetup() {
-    // preferences.begin("my", false);
-    // short int counter = preferences.getShort("counter", 0);
-    // while (counter != MAX_SETUP_MQ3) {
-    //   delay(delayTime);
-    //   counter++;
-    //   preferences.putShort("counter", counter);
-    // }
-    // preferences.end();
-    pinMode(pinIRLML2505, OUTPUT);
-    digitalWrite(pinIRLML2505, HIGH);
-    delay(60000);  // 1 minute to preheat MQ3
+    setEstimate();
+    delay(100);
   }
 
   void setEstimate() {
-    kalmanDS.setEstimate(arrTemp[0]);
-    kalmanToF.setEstimate(tofSensor.readRangeSingleMillimeters());
-    kalmanMQ3.setEstimate(analogRead(pinMQ3));
+    float arr_temp[5] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+
+    for (int i = 0; i < 5; i++) {
+      tempSensor.requestTemperatures();
+      arr_temp[i] = tempSensor.getTempCByIndex(0);
+      delay(100);
+    }
+    kalmanDS.setEstimate(medianArray(arr_temp, 5));
+
+    for (int i = 0; i < 5; i++) {
+      arr_temp[i] = tofSensor.readRangeSingleMillimeters();
+      delay(100);
+    }
+    kalmanToF.setEstimate(medianArray(arr_temp, 5));
+
+    pinMode(pinIRLML2505, OUTPUT);
+    digitalWrite(pinIRLML2505, HIGH);
+    delay(60000);  // 1 minute to preheat MQ3
+    for (int i = 0; i < 5; i++) {
+      arr_temp[i] = analogRead(pinMQ3);
+      delay(100);
+    }
+    kalmanMQ3.setEstimate(medianArray(arr_temp, 5));
     delay(100);
   }
 
@@ -119,7 +124,7 @@ class SM {
     return temp;
   }
 
-  SensorsReading getMean(const int i) const {
+  SensorsReading getMean() const {
     float raw_meanMQ3 = totalEth / n;
     float raw_meanDS = totalTemp / n;
     float raw_meanToF = totalDist / n;
@@ -128,15 +133,28 @@ class SM {
     float fil_meanDS = kalmanDS.getMean();
     float fil_meanToF = kalmanToF.getMean();
 
-    // String payload = String("{") + "\"mean_eth\":" + kalmanMQ3.getMean() +
-    // "," +
-    //                  "\"mean_raw_eth\":" + raw_meanMQ3 + "," +
-    //                  "\"mean_temp\":" + kalmanDS.getMean() + "," +
-    //                  "\"mean_raw_temp\":" + raw_meanDS + "," +
-    //                  "\"mean_hei\":" + kalmanToF.getMean() + "," +
-    //                  "\"mean_raw_hei\":" + raw_meanToF + "," +
-    //                  "\"n\":" + (i + 1) + "}";
     return {raw_meanMQ3, raw_meanDS, raw_meanToF,
             fil_meanMQ3, fil_meanDS, fil_meanToF};
+  }
+
+  float medianArray(float arr[], int n) {
+    if (n <= 0) return 0;
+
+    // simple bubble sort
+    for (int i = 0; i < n - 1; i++) {
+      for (int j = 0; j < n - i - 1; j++) {
+        if (arr[j] > arr[j + 1]) {
+          float tmp = arr[j];
+          arr[j] = arr[j + 1];
+          arr[j + 1] = tmp;
+        }
+      }
+    }
+
+    if (n % 2 == 1) {
+      return arr[((n + 1) / 2) - 1];  // ganjil
+    } else {
+      return 0.5f * (arr[n / 2 - 1] + arr[n / 2]);  // genap
+    }
   }
 };

@@ -4,7 +4,7 @@
 class MQ3Calibration {
  private:
   // Raw ADC limits
-  const float RAW_MIN = 1220.0f;  // clean air baseline → 0 ppm
+  const float RAW_MIN = 1200.0f;  // clean air baseline → 0 ppm
   const float RAW_MAX = 4095.0f;  // max reading → 500 ppm
 
   // PPM limits
@@ -22,11 +22,11 @@ class MQ3Calibration {
   }
 
   // Apply linear mapping and clamp 0–500
-  float apply(float raw) const {
+  int apply(float raw) const {
     if (raw <= RAW_MIN) return 0.0f;
     if (raw >= RAW_MAX) return PPM_MAX;
 
-    return raw * scale + offset;
+    return int(raw * scale + offset);
   }
 
   // Optional: allow user to update clean-air baseline (RAW_MIN)

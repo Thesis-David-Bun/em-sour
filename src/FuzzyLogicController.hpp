@@ -39,7 +39,7 @@ class FLC {
 
   // ---------- Tunable thresholds (modifiable) ----------
   const float overflowHeightThreshold =
-      100.0f;  // mm absolute or jar-specific (you said ΔH available)
+      90.0f;  // mm absolute or jar-specific (you said ΔH available)
   const int ethanolSaturateValue = 4095;  // raw ADC saturation
   const int ethanolSaturateNeeded = 3;    // count threshold
 
@@ -48,29 +48,29 @@ class FLC {
   const float fallEpsilon = 0.5f;
 
   // Small meaningful rise
-  const float minMeaningfulDelta = 0.25f;  // mm
+  const float minMeaningfulDelta = 0.1f;  // mm
 
   // Output domain resolution
   const int OUT_STEPS;
 
   // --- Fuzzy thresholds (inputs) ---
   // Temperature (°C)
-  const float T_low_max = 29.9f;
-  const float T_med_min = 30.0f - 2.5f;
-  const float T_med_max = 32.9f + 2.5f;
+  const float T_low_max = 29.0f;
+  const float T_med_min = 29.0f;
+  const float T_med_max = 33.0f;
   const float T_high_min = 33.0f;
 
   // Delta height (mm)
-  const float H_low_max = 15.0f;
-  const float H_med_min = 16.0f - 2.5f;
-  const float H_med_max = 25.0f + 2.5f;
-  const float H_high_min = 26.0f;
+  const float H_low_max = 160.0f;
+  const float H_med_min = 160.0f;
+  const float H_med_max = 140.0f;
+  const float H_high_min = 140.0f;
 
   // Ethanol (assume scaled 0..4095 OR ppm); thresholds chosen as raw ADC-ish
-  const float E_low_max = 2178.9f;
-  const float E_med_min = 2179.0f - 100.0f;
-  const float E_med_max = 3136.9f + 100.0f;
-  const float E_high_min = 3137.0f;
+  const float E_low_max = 2000.0f;
+  const float E_med_min = 2000.0f;
+  const float E_med_max = 3000.0f;
+  const float E_high_min = 3000.0f;
 
   // ---------- Public API ----------
   void begin(const char* ns = nullptr) {
@@ -85,7 +85,8 @@ class FLC {
   }
 
   // Update with current sensor readings; returns current State
-  String infer(float deltaH_mm, int ethanolRaw, float tempC) {
+  String infer(const float deltaH_mm, const float ethanolRaw,
+               const float tempC) {
     // Load persisted state
     float last_dh = prefs.getFloat(K_LAST_DH, 0.0f);
     float peak_h = prefs.getFloat(K_PEAK_H, 0.0f);
@@ -96,7 +97,7 @@ class FLC {
     // --- detect rise / fall based on last delta (n-1) compare ---
     bool isRising = false;
     bool isFalling = false;
-    float diff = deltaH_mm - last_dh;
+    float diff = last_dh - deltaH_mm;
     if (diff > riseEpsilon)
       isRising = true;
     else if (diff < -fallEpsilon)
@@ -160,26 +161,29 @@ class FLC {
     float W = tempWarm(tempC);
     float Ht = tempHot(tempC);
 
-    float RL = riseLow(deltaH_mm);
+    float RL = riseHigh(deltaH_mm);
     float RM = riseMed(deltaH_mm);
-    float RH = riseHigh(deltaH_mm);
+    float RH = riseLow(deltaH_mm);
 
     float EL = ethLow(ethanolRaw);
     float EM = ethMed(ethanolRaw);
     float EH = ethHigh(ethanolRaw);
 
     // Rule activations (antecedents) — as you defined (revised semantically)
-    float r_ready = min(W, min(RH, EM));         // Rule 1
-    float r_readyUrgent = min(Ht, min(RH, EM));  // Rule 3
-    float r_readyOpt = min(C, min(RH, EM));      // Rule 2
+    float r_ready = min(W, min(RH, EH));         // Rule 1
+    float r_readyOpt = min(C, min(RH, EH));      // Rule 2
+    float r_readyUrgent = min(Ht, min(RH, EH));  // Rule 3
     float r_feedAgain = min(RM, max(EM, EH));    // Rule 4
-    float r_notReady = RL;                       // Rule 5 (weak starter)
-    float r_recovery =
-        min(RH, EH);  // Rule 6 (high rise + high ethanol -> recovery/refeed)
+    float r_notReady = min(RL, max(EM, EH));     // Rule 5
 
     // Aggregate output fuzzy sets by clipping their output MFs with the rule
     // strengths Output variable domain: x in [0,1], with defined output MFs
     // (triangular-like)
+    String temp = String("ready:") + r_ready + ", urgent:" + r_readyUrgent +
+                  ", opt:" + r_readyOpt + ", feedAgain:" + r_feedAgain +
+                  ", notReady:" + r_notReady;
+    Serial.println(temp);
+
     float num = 0.0f, den = 0.0f;
     for (int i = 0; i <= OUT_STEPS; i++) {
       float x = float(i) / OUT_STEPS;
@@ -189,18 +193,26 @@ class FLC {
       float miu_opt = min(r_readyOpt, mfReadyOptional(x));
       float miu_notReady = min(r_notReady, mfNotReady(x));
       float miu_feed = min(r_feedAgain, mfFeedAgain(x));
-      float miu_recover = min(r_recovery, mfRecovery(x));
 
       float miu =
-          max(max(max(max(max(miu_ready, miu_urgent), miu_opt), miu_notReady),
-                  miu_feed),
-              miu_recover);
+          max(max(max(max(miu_ready, miu_urgent), miu_opt), miu_notReady),
+              miu_feed);
 
       num += x * miu;
       den += miu;
+      String temp = String(". ready:") + miu_ready + ", urgent:" + miu_urgent +
+                    ", opt:" + miu_opt + ", notReady:" + miu_notReady +
+                    ", feed:" + miu_feed + ", num:" + num + ", den:" + den +
+                    ", miu:" + miu;
+      Serial.print(i);
+      Serial.println(temp);
     }
 
     float crisp = (den == 0.0f) ? 0.0f : (num / den);
+
+    Serial.println(num);
+    Serial.println(den);
+    Serial.println(crisp);
 
     // Map crisp to discrete category
     if (crisp > 0.85f) return "\"READY_URGENT\"";
@@ -245,7 +257,7 @@ class FLC {
     return min(L, R);
   }
   float tempHot(float T) {
-    return riseLinear(T, T_high_min, T_high_min + 4.0f);
+    return riseLinear(T, T_high_min, T_high_min + 1.0f);
   }
 
   float riseLow(float h) { return fallLinear(h, H_low_max, H_med_min); }
@@ -269,10 +281,16 @@ class FLC {
   }
 
   // Output MFs over [0..1]
-  float mfReady(float x) { return riseLinear(x, 0.75f, 1.0f); }
-  float mfReadyUrgent(float x) { return riseLinear(x, 0.85f, 1.0f); }
-  float mfReadyOptional(float x) { return riseLinear(x, 0.55f, 0.75f); }
-  float mfNotReady(float x) { return riseLinear(x, 0.25f, 0.45f); }
-  float mfFeedAgain(float x) { return riseLinear(x, 0.1f, 0.3f); }
-  float mfRecovery(float x) { return riseLinear(x, 0.0f, 0.2f); }
+  // float mfReady(float x) { return riseLinear(x, 0.75f, 1.0f); }
+  // float mfReadyUrgent(float x) { return riseLinear(x, 0.85f, 1.0f); }
+  // float mfReadyOptional(float x) { return riseLinear(x, 0.55f, 0.75f); }
+  // float mfNotReady(float x) { return riseLinear(x, 0.25f, 0.45f); }
+  // float mfFeedAgain(float x) { return riseLinear(x, 0.1f, 0.3f); }
+  // float mfRecovery(float x) { return riseLinear(x, 0.0f, 0.2f); }
+
+  float mfReady(float x) { return riseLinear(x, 0.60f, 0.80f); }
+  float mfReadyUrgent(float x) { return riseLinear(x, 0.80f, 1.00f); }
+  float mfReadyOptional(float x) { return riseLinear(x, 0.40f, 0.60f); }
+  float mfNotReady(float x) { return riseLinear(x, 0.20f, 0.40f); }
+  float mfFeedAgain(float x) { return riseLinear(x, 0.00f, 0.20f); }
 };

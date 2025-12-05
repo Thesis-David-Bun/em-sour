@@ -1,6 +1,5 @@
 #include <Arduino.h>
 
-#include "FuzzyLogicController.hpp"
 #include "MQTTManager.hpp"
 #include "SensorsManager.hpp"
 #include "WiFiManager.hpp"
@@ -21,7 +20,6 @@ constexpr const int pin_ds = 4;
 WFM wfm(ssid, pass);
 MM mm(hiveMQ_url, port, id_mqtt, pass_mqtt);
 SM sm(pin_mq3, pin_ds, 23);
-FLC flc(50);
 
 constexpr uint64_t SLEEP_TIME = 10ULL * 60ULL * 1000000ULL;  // 10 MINUTES
 
@@ -33,17 +31,6 @@ void setup() {
   wfm.connect();
   mm.connect();
   sm.setup();
-  mm.is_reset();
-
-  if (getData("res") == 1) {
-    flc.clearState();
-    putData(0, "res");
-    // Serial.println("00");
-    mm.publish("/success", "500");
-  }
-
-  sm.initialSetup();
-  sm.setEstimate();
 
   // 10 readings
   for (int i = 1; i <= SIZE_ARR; i++) {
@@ -58,14 +45,12 @@ void setup() {
       //                  "}";
       // mm.publish(topic, payload.c_str());
       if (i == 10) {
-        SensorsReading p = sm.getMean(i);
+        SensorsReading p = sm.getMean();
         String payload =
             String("{") + "\"raw_mean_E\":" + p.rawE +
             ",\"fil_mean_E\":" + p.filE + ",\"raw_mean_T\":" + p.rawT +
             ",\"fil_mean_T\":" + p.filT + ",\"raw_mean_H\":" + p.rawH +
-            ",\"fil_mean_H\":" + p.filH +
-            ",\"status\":" + flc.infer(187.0f - p.filH, p.filE, p.filT) +
-            ",\"n\":11" + "}";
+            ",\"fil_mean_H\":" + p.filH + "}";
         mm.publish(topic, payload.c_str());
       }
     } else {
