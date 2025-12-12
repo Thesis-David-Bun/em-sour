@@ -29,7 +29,7 @@ struct SensorsReading {
 
 class SM {
  private:
-  uint16_t arrTemp[SIZE_ARR] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  float arrTemp[SIZE_ARR] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
   float totalEth = 0.0;
   float totalTemp = 0.0;
