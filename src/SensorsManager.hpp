@@ -62,6 +62,7 @@ class SM {
     tempSensor.begin();
     Wire.begin();
     tofSensor.setTimeout(tofTimeout);
+    pinMode(pinIRLML2505, OUTPUT);
 
     if (tofSensor.init()) {
       tofSensor.setMeasurementTimingBudget(tofTimingMeasure);
@@ -77,22 +78,21 @@ class SM {
     for (int i = 0; i < 5; i++) {
       tempSensor.requestTemperatures();
       arr_temp[i] = tempSensor.getTempCByIndex(0);
-      delay(100);
+      delay(50);
     }
     kalmanDS.setEstimate(medianArray(arr_temp, 5));
 
     for (int i = 0; i < 5; i++) {
       arr_temp[i] = tofSensor.readRangeSingleMillimeters();
-      delay(100);
+      delay(50);
     }
     kalmanToF.setEstimate(medianArray(arr_temp, 5));
 
-    pinMode(pinIRLML2505, OUTPUT);
     digitalWrite(pinIRLML2505, HIGH);
     delay(60000);  // 1 minute to preheat MQ3
     for (int i = 0; i < 5; i++) {
       arr_temp[i] = analogRead(pinMQ3);
-      delay(100);
+      delay(50);
     }
     kalmanMQ3.setEstimate(medianArray(arr_temp, 5));
     delay(100);

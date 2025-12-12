@@ -26,7 +26,7 @@ constexpr uint64_t SLEEP_TIME = 10ULL * 60ULL * 1000000ULL;  // 10 MINUTES
 void setup() {
   uint64_t start = millis();
   // Serial.begin(115200);
-  delay(50);
+  delay(100);
 
   wfm.connect();
   mm.connect();
@@ -41,7 +41,8 @@ void setup() {
       //                  "\"fil_temperature\":" + t.filTemp + "," +
       //                  "\"raw_temperature\":" + t.rawTemp + "," +
       //                  "\"fil_height\":" + t.filDist + "," +
-      //                  "\"raw_height\":" + t.rawDist + "," + "\"n\":" + i +
+      //                  "\"raw_height\":" + t.rawDist + "," + "\"n\":" + i
+      // +
       //                  "}";
       // mm.publish(topic, payload.c_str());
       if (i == 10) {
@@ -62,7 +63,7 @@ void setup() {
   }
 
   digitalWrite(23, LOW);
-  WiFi.disconnect(true);
+  WiFi.disconnect(true, true);
   WiFi.mode(WIFI_OFF);
 
   uint64_t finish = (millis() - start) * 1000;

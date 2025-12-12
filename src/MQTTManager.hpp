@@ -10,7 +10,7 @@ class MM {
   const char* user_name;
   const char* password;
 
-  unsigned long MAX_DURATION = 20000;  // 10 seconds
+  unsigned long MAX_DURATION = 10000;  // 10 seconds
 
   WiFiClientSecure wifiClient;
   PubSubClient mqttClient;
@@ -27,13 +27,11 @@ class MM {
     wifiClient.setInsecure();
     mqttClient.setServer(broker_url, port);
 
-    String clientID = "ESP32-C" + String(random(0xffff), HEX);
+    String clientID = "C" + String(random(0xffff), HEX);
     unsigned long start = millis();
     while (!mqttClient.connected() && millis() - start < MAX_DURATION) {
       if (mqttClient.connect(clientID.c_str(), user_name, password)) {
         break;
-      } else {
-        delay(100);
       }
     }
   }

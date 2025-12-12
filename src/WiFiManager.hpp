@@ -16,7 +16,6 @@ class WFM {
 
     unsigned long start = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - start < MAX_DURATION) {
-      delay(100);
     }
   }
 
