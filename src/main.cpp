@@ -35,16 +35,7 @@ void setup() {
   // 10 readings
   for (int i = 1; i <= SIZE_ARR; i++) {
     if (wfm.status() && mm.status()) {
-      SensorsReading t = sm.readAll(i - 1);
-      // String payload = String("{") + "\"fil_eth\":" + t.filEth + "," +
-      //                  "\"raw_eth\":" + t.rawEth + "," +
-      //                  "\"fil_temperature\":" + t.filTemp + "," +
-      //                  "\"raw_temperature\":" + t.rawTemp + "," +
-      //                  "\"fil_height\":" + t.filDist + "," +
-      //                  "\"raw_height\":" + t.rawDist + "," + "\"n\":" + i
-      // +
-      //                  "}";
-      // mm.publish(topic, payload.c_str());
+      sm.readAll(i - 1);
       if (i == 10) {
         SensorsReading p = sm.getMean();
         String payload =
@@ -54,6 +45,7 @@ void setup() {
             ",\"fil_mean_H\":" + p.filH + "}";
         mm.publish(topic, payload.c_str());
       }
+      mm.loop();
     } else {
       wfm.ensureConnection();
       mm.ensureConnection();

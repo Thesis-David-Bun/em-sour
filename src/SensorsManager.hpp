@@ -29,8 +29,7 @@ struct SensorsReading {
 
 class SM {
  private:
-  float arrTemp[SIZE_ARR] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                             0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+  uint16_t arrTemp[SIZE_ARR] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   float totalEth = 0.0;
   float totalTemp = 0.0;
@@ -73,28 +72,40 @@ class SM {
   }
 
   void setEstimate() {
-    float arr_temp[5] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    float arr_temp_float[5] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
     for (int i = 0; i < 5; i++) {
       tempSensor.requestTemperatures();
-      arr_temp[i] = tempSensor.getTempCByIndex(0);
-      delay(50);
+      arr_temp_float[i] = tempSensor.getTempCByIndex(0);
+      delay(100);
     }
-    kalmanDS.setEstimate(medianArray(arr_temp, 5));
+    kalmanDS.setEstimate(medianArray_float(arr_temp_float, 5));
+
+    arr_temp_float[0] = 0.0f;
+    arr_temp_float[1] = 0.0f;
+    arr_temp_float[2] = 0.0f;
+    arr_temp_float[3] = 0.0f;
+    arr_temp_float[4] = 0.0f;
 
     for (int i = 0; i < 5; i++) {
-      arr_temp[i] = tofSensor.readRangeSingleMillimeters();
-      delay(50);
+      arr_temp_float[i] = (float)tofSensor.readRangeSingleMillimeters();
+      delay(100);
     }
-    kalmanToF.setEstimate(medianArray(arr_temp, 5));
+    kalmanToF.setEstimate(medianArray_float(arr_temp_float, 5));
+
+    arr_temp_float[0] = 0.0f;
+    arr_temp_float[1] = 0.0f;
+    arr_temp_float[2] = 0.0f;
+    arr_temp_float[3] = 0.0f;
+    arr_temp_float[4] = 0.0f;
 
     digitalWrite(pinIRLML2505, HIGH);
     delay(60000);  // 1 minute to preheat MQ3
     for (int i = 0; i < 5; i++) {
-      arr_temp[i] = analogRead(pinMQ3);
-      delay(50);
+      arr_temp_float[i] = (float)analogRead(pinMQ3);
+      delay(100);
     }
-    kalmanMQ3.setEstimate(medianArray(arr_temp, 5));
+    kalmanMQ3.setEstimate(medianArray_float(arr_temp_float, 5));
     delay(100);
   }
 
@@ -111,9 +122,9 @@ class SM {
 
     temp.rawT = arrTemp[i];
     totalTemp += temp.rawT;
-    temp.rawE = analogRead(pinMQ3);
+    temp.rawE = (float)analogRead(pinMQ3);
     totalEth += temp.rawE;
-    temp.rawH = tofSensor.readRangeSingleMillimeters();
+    temp.rawH = (float)tofSensor.readRangeSingleMillimeters();
     totalDist += temp.rawH;
     n++;
 
@@ -137,7 +148,7 @@ class SM {
             fil_meanMQ3, fil_meanDS, fil_meanToF};
   }
 
-  float medianArray(float arr[], int n) {
+  float medianArray_float(float arr[], int n) {
     if (n <= 0) return 0;
 
     // simple bubble sort
@@ -151,10 +162,23 @@ class SM {
       }
     }
 
-    if (n % 2 == 1) {
-      return arr[((n + 1) / 2) - 1];  // ganjil
-    } else {
-      return 0.5f * (arr[n / 2 - 1] + arr[n / 2]);  // genap
+    return arr[((n + 1) / 2) - 1];
+  }
+
+  uint16_t medianArray_u16(uint16_t arr[], int n) {
+    if (n <= 0) return 0;
+
+    // simple bubble sort
+    for (int i = 0; i < n - 1; i++) {
+      for (int j = 0; j < n - i - 1; j++) {
+        if (arr[j] > arr[j + 1]) {
+          uint16_t tmp = arr[j];
+          arr[j] = arr[j + 1];
+          arr[j + 1] = tmp;
+        }
+      }
     }
+
+    return arr[((n + 1) / 2) - 1];
   }
 };
