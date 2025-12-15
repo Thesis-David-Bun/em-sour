@@ -6,9 +6,9 @@
 
 #include "Kalman1D.hpp"
 
-constexpr const int tofTimeout = 3500;
-constexpr const int tofTimingMeasure = 2000000;      // 2000ms
-constexpr const uint32_t delayTime = 1000 * 60 * 5;  // 5 minutes
+constexpr const uint16_t tofTimeout = 2000;
+constexpr const uint32_t tofTimingMeasure = 1000000;  // 2000ms
+constexpr const uint32_t delayTime = 1000 * 60 * 5;   // 5 minutes
 // constexpr const short int MAX_SETUP_MQ3 = (60 / 5) * 24;  // 48 hours
 
 constexpr const float sigmaToF = 1.33f * 1.33f;
@@ -29,7 +29,8 @@ struct SensorsReading {
 
 class SM {
  private:
-  float arrTemp[SIZE_ARR] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+  float arrTemp[SIZE_ARR] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                             0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
   float totalEth = 0.0;
   float totalTemp = 0.0;
@@ -65,9 +66,9 @@ class SM {
 
     if (tofSensor.init()) {
       tofSensor.setMeasurementTimingBudget(tofTimingMeasure);
+      readTemp();
+      setEstimate();
     }
-    readTemp();
-    setEstimate();
     delay(100);
   }
 
