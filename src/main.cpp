@@ -29,34 +29,35 @@ void setup() {
   delay(100);
 
   wfm.connect();
-  mm.connect();
-  sm.setup();
+  if (wfm.status()) {
+    mm.connect();
+    sm.setup();
 
-  // 10 readings
-  for (int i = 1; i <= SIZE_ARR; i++) {
-    if (wfm.status() && mm.status()) {
-      sm.readAll(i - 1);
-      if (i == 10) {
-        SensorsReading p = sm.getMean();
-        String payload =
-            String("{") + "\"raw_mean_E\":" + p.rawE +
-            ",\"fil_mean_E\":" + p.filE + ",\"raw_mean_T\":" + p.rawT +
-            ",\"fil_mean_T\":" + p.filT + ",\"raw_mean_H\":" + p.rawH +
-            ",\"fil_mean_H\":" + p.filH + "}";
-        mm.publish(topic, payload.c_str());
+    // 10 readings
+    for (int i = 1; i <= SIZE_ARR; i++) {
+      if (wfm.status() && mm.status()) {
+        sm.readAll(i - 1);
+        if (i == 10) {
+          SensorsReading p = sm.getMean();
+          String payload =
+              String("{") + "\"raw_mean_E\":" + p.rawE +
+              ",\"fil_mean_E\":" + p.filE + ",\"raw_mean_T\":" + p.rawT +
+              ",\"fil_mean_T\":" + p.filT + ",\"raw_mean_H\":" + p.rawH +
+              ",\"fil_mean_H\":" + p.filH + "}";
+          mm.publish(topic, payload.c_str());
+        }
+        mm.loop();
+      } else {
+        wfm.ensureConnection();
+        mm.ensureConnection();
+        i--;
       }
-      mm.loop();
-    } else {
-      wfm.ensureConnection();
-      mm.ensureConnection();
-      i--;
+      delay(100);
     }
-    delay(100);
+    digitalWrite(23, LOW);
+    WiFi.disconnect(true, true);
+    WiFi.mode(WIFI_OFF);
   }
-
-  digitalWrite(23, LOW);
-  WiFi.disconnect(true, true);
-  WiFi.mode(WIFI_OFF);
 
   uint64_t finish = (millis() - start) * 1000;
   esp_sleep_enable_timer_wakeup(SLEEP_TIME - finish);
