@@ -33,12 +33,17 @@ void setup() {
     mm.connect();
     sm.setup();
 
-    // 10 readings
     for (int i = 1; i <= SIZE_ARR; i++) {
       if (wfm.status() && mm.status()) {
-        sm.readAll(i - 1);
-        if (i == 10) {
-          SensorsReading p = sm.getMean();
+        SensorsReading p = sm.readAll(i - 1);
+        // String payload_1 =
+        //     String("{") + "\"raw_mean_E\":" + temp.rawE +
+        //     ",\"fil_mean_E\":" + temp.filE + ",\"raw_mean_T\":" + temp.rawT +
+        //     ",\"fil_mean_T\":" + temp.filT + ",\"raw_mean_H\":" + temp.rawH +
+        //     ",\"fil_mean_H\":" + temp.filH + "}";
+        // mm.publish(topic, payload_1.c_str());
+        if (i == SIZE_ARR) {
+          // SensorsReading p = sm.getMean();
           String payload =
               String("{") + "\"raw_mean_E\":" + p.rawE +
               ",\"fil_mean_E\":" + p.filE + ",\"raw_mean_T\":" + p.rawT +
@@ -60,6 +65,7 @@ void setup() {
   }
 
   uint64_t finish = (millis() - start) * 1000;
+  // Serial.println(finish);
   esp_sleep_enable_timer_wakeup(SLEEP_TIME - finish);
   esp_deep_sleep_start();
 }

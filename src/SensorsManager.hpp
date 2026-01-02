@@ -11,11 +11,11 @@ constexpr const uint32_t tofTimingMeasure = 1000000;  // 2000ms
 constexpr const uint32_t delayTime = 1000 * 60 * 5;   // 5 minutes
 // constexpr const short int MAX_SETUP_MQ3 = (60 / 5) * 24;  // 48 hours
 
-constexpr const float sigmaToF = 1.33f * 1.33f;
+constexpr const float sigmaToF = 0.4302f;
 constexpr const float sigmaDS = 0.32f * 0.32f;
-constexpr const float sigmaMQ3 = 8.29f * 8.29f;
+constexpr const float sigmaMQ3 = 46.8990f;
 
-constexpr const int SIZE_ARR = 10;
+constexpr const int SIZE_ARR = 50;
 
 struct SensorsReading {
   float rawE;  // Ethanol -> MQ-3
@@ -29,8 +29,7 @@ struct SensorsReading {
 
 class SM {
  private:
-  float arrTemp[SIZE_ARR] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                             0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+  float arrTemp[SIZE_ARR];
 
   float totalEth = 0.0;
   float totalTemp = 0.0;
@@ -54,9 +53,9 @@ class SM {
         pinIRLML2505(c),
         oneWire(b),
         tempSensor(&oneWire),
-        kalmanToF(0.7f, sigmaToF),
-        kalmanMQ3(0.8f, sigmaMQ3),
-        kalmanDS(0.5f, sigmaDS) {}
+        kalmanToF(1.0f, sigmaToF),
+        kalmanMQ3(1.0f, sigmaMQ3),
+        kalmanDS(1.0f, sigmaDS) {}
 
   void setup() {
     tempSensor.begin();
@@ -78,7 +77,6 @@ class SM {
     for (int i = 0; i < 5; i++) {
       tempSensor.requestTemperatures();
       arr_temp_float[i] = tempSensor.getTempCByIndex(0);
-      delay(100);
     }
     kalmanDS.setEstimate(medianArray_float(arr_temp_float, 5));
 
@@ -90,7 +88,6 @@ class SM {
 
     for (int i = 0; i < 5; i++) {
       arr_temp_float[i] = (float)tofSensor.readRangeSingleMillimeters();
-      delay(100);
     }
     kalmanToF.setEstimate(medianArray_float(arr_temp_float, 5));
 
@@ -101,10 +98,9 @@ class SM {
     arr_temp_float[4] = 0.0f;
 
     digitalWrite(pinIRLML2505, HIGH);
-    delay(60000);  // 1 minute to preheat MQ3
+    delay(60000 * 2);  // 1 minute to preheat MQ3
     for (int i = 0; i < 5; i++) {
       arr_temp_float[i] = (float)analogRead(pinMQ3);
-      delay(100);
     }
     kalmanMQ3.setEstimate(medianArray_float(arr_temp_float, 5));
     delay(100);
@@ -114,7 +110,6 @@ class SM {
     for (int i = 0; i < SIZE_ARR; i++) {
       tempSensor.requestTemperatures();
       arrTemp[i] = tempSensor.getTempCByIndex(0);
-      delay(100);
     }
   }
 
@@ -141,9 +136,9 @@ class SM {
     float raw_meanDS = totalTemp / n;
     float raw_meanToF = totalDist / n;
 
-    float fil_meanMQ3 = kalmanMQ3.getMean();
-    float fil_meanDS = kalmanDS.getMean();
-    float fil_meanToF = kalmanToF.getMean();
+    float fil_meanMQ3 = kalmanMQ3.getEstimate();
+    float fil_meanDS = kalmanDS.getEstimate();
+    float fil_meanToF = kalmanToF.getEstimate();
 
     return {raw_meanMQ3, raw_meanDS, raw_meanToF,
             fil_meanMQ3, fil_meanDS, fil_meanToF};
