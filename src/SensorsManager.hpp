@@ -98,7 +98,7 @@ class SM {
     arr_temp_float[4] = 0.0f;
 
     digitalWrite(pinIRLML2505, HIGH);
-    delay(60000 * 2);  // 1 minute to preheat MQ3
+    delay(60000 * 2);  // 2 minute to preheat MQ3
     for (int i = 0; i < 5; i++) {
       arr_temp_float[i] = (float)analogRead(pinMQ3);
     }
@@ -113,16 +113,16 @@ class SM {
     }
   }
 
-  SensorsReading readAll(const int i) {
+  SensorsReading readAll(const int i = 1) {
     SensorsReading temp;
 
     temp.rawT = arrTemp[i];
-    totalTemp += temp.rawT;
+    // totalTemp += temp.rawT;
     temp.rawE = (float)analogRead(pinMQ3);
-    totalEth += temp.rawE;
+    // totalEth += temp.rawE;
     temp.rawH = (float)tofSensor.readRangeSingleMillimeters();
-    totalDist += temp.rawH;
-    n++;
+    // totalDist += temp.rawH;
+    // n++;
 
     temp.filE = kalmanMQ3.update(temp.rawE);
     temp.filT = kalmanDS.update(temp.rawT);

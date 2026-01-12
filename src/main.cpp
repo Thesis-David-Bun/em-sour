@@ -25,12 +25,11 @@ constexpr uint64_t SLEEP_TIME = 10ULL * 60ULL * 1000000ULL;  // 10 MINUTES
 
 void setup() {
   uint64_t start = millis();
-  // Serial.begin(115200);
   delay(100);
 
   wfm.connect();
-  if (wfm.status()) {
-    mm.connect();
+  mm.connect();
+  if (wfm.status() && mm.status()) {
     sm.setup();
 
     for (int i = 1; i <= SIZE_ARR; i++) {
@@ -60,12 +59,10 @@ void setup() {
       delay(100);
     }
     digitalWrite(23, LOW);
-    WiFi.disconnect(true, true);
-    WiFi.mode(WIFI_OFF);
   }
-
+  WiFi.disconnect(true, true);
+  WiFi.mode(WIFI_OFF);
   uint64_t finish = (millis() - start) * 1000;
-  // Serial.println(finish);
   esp_sleep_enable_timer_wakeup(SLEEP_TIME - finish);
   esp_deep_sleep_start();
 }
